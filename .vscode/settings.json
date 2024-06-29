@@ -10,5 +10,9 @@
             "database": "slax_dev",
             "username": "postgres"
         }
-    ]
+    ],
+    "emmet.includeLanguages": {
+        "phoenix-heex": "html",
+        "elixir": "html"
+    }
 }
