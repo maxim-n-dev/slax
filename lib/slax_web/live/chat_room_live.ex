@@ -33,7 +33,6 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def handle_event("toggle-topic", _params, socket) do
-    socket = update(socket, :hide_topic?, fn value -> !value end)
-    {:noreply, socket}
+    {:noreply, update(socket, :hide_topic?, &(!&1))}
   end
 end
