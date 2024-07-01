@@ -50,7 +50,6 @@ defmodule SlaxWeb.ChatRoomLive do
 
   @spec handle_params(map(), any(), Phoenix.LiveView.Socket.t()) :: {:noreply, any()}
   def handle_params(params, _session, socket) do
-    IO.puts("handle_params #{inspect(params)} (connected: #{connected?(socket)})")
 
     room =
       case Map.fetch(params, "id") do
@@ -59,7 +58,7 @@ defmodule SlaxWeb.ChatRoomLive do
       end
 
 
-      {:noreply, assign(socket, hide_topic?: false, room: room)}
+      {:noreply, assign(socket, hide_topic?: false, page_title: "#" <> room.name, room: room)}
   end
 
   def handle_event("toggle-topic", _params, socket) do
