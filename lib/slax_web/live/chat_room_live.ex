@@ -90,11 +90,11 @@ defmodule SlaxWeb.ChatRoomLive do
       </div>
       <div class="h-12 bg-white px-4 pb-4">
         <.form
-        id="new-message-form"
-        for={@new_message_form}
-        phx-change="validate-message"
-        phx-submit="submit-message"
-        class="flex items-center border-2 border-slate-300 rounded-sm p-1"
+          id="new-message-form"
+          for={@new_message_form}
+          phx-change="validate-message"
+          phx-submit="submit-message"
+          class="flex items-center border-2 border-slate-300 rounded-sm p-1"
         >
           <textarea
             class="flex-grow text-sm px-3 border-l border-slate-300 mx-1 resize-none overflow-auto"
@@ -120,15 +120,13 @@ defmodule SlaxWeb.ChatRoomLive do
     {:ok, assign(socket, rooms: rooms)}
   end
 
-  @spec handle_params(map(), any(), Phoenix.LiveView.Socket.t()) :: {:noreply, any()}
   def handle_params(params, _session, socket) do
     room =
       case Map.fetch(params, "id") do
         {:ok, id} -> Chat.get_room!(id)
         :error -> List.first(socket.assigns.rooms)
       end
-
-    messages = Chat.list_messages_in_room(room)
+      messages = Chat.list_messages_in_room(room)
 
     {:noreply,
      socket
@@ -164,11 +162,12 @@ defmodule SlaxWeb.ChatRoomLive do
           socket
           |> update(:messages, &(&1 ++ [message]))
           |> assign_message_form(Chat.change_message(%Message{}))
+
         {:error, changeset} ->
           assign_message_form(socket, changeset)
       end
 
-      {:noreply, socket}
+    {:noreply, socket}
   end
 
   attr :active, :boolean, required: true

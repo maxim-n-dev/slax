@@ -43,6 +43,7 @@ defmodule Slax.Chat do
   def change_message(message, attrs \\ %{}) do
     Message.changeset(message, attrs)
   end
+
   def create_message(room, attrs, user) do
     %Message{room: room, user: user}
     |> Message.changeset(attrs)
