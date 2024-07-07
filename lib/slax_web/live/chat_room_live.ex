@@ -114,6 +114,7 @@ defmodule SlaxWeb.ChatRoomLive do
             name={@new_message_form[:body].name}
             placeholder={"Message ##{@room.name}"}
             phx-debounce
+            phx-hook="ChatMessageTextarea"
             id="chat-message-textarea"
             rows="1"
           ><%= Phoenix.HTML.Form.normalize_value("textarea", @new_message_form[:body].value) %></textarea>
@@ -160,6 +161,7 @@ defmodule SlaxWeb.ChatRoomLive do
        room: room
      )
      |> stream(:messages, messages, reset: true)
+     |> push_event("scroll_messages_to_bottom", %{})
      |> assign_message_form(Chat.change_message(%Message{}))}
   end
 
