@@ -40,7 +40,7 @@ defmodule SlaxWeb.ChatRoomLive do
               :for={user <- @users}
               user={user}
               online={OnlineUsers.online?(@online_users, user.id)}
-             />
+            />
           </div>
         </div>
       </div>
@@ -107,7 +107,12 @@ defmodule SlaxWeb.ChatRoomLive do
           <% end %>
         </ul>
       </div>
-      <div phx-hook="RoomMessages" id="room-messages" class="flex flex-col flex-grow overflow-auto" phx-update="stream">
+      <div
+        phx-hook="RoomMessages"
+        id="room-messages"
+        class="flex flex-col flex-grow overflow-auto"
+        phx-update="stream"
+      >
         <.message
           :for={{dom_id, message} <- @streams.messages}
           current_user={@current_user}
@@ -143,8 +148,8 @@ defmodule SlaxWeb.ChatRoomLive do
     """
   end
 
+
   def mount(_params, _session, socket) do
-    rooms = Chat.list_rooms()
     users = Accounts.list_users()
 
     timezone = get_connect_params(socket)["timezone"]
@@ -152,11 +157,13 @@ defmodule SlaxWeb.ChatRoomLive do
     if connected?(socket) do
       OnlineUsers.track(self(), socket.assigns.current_user)
     end
+
+    OnlineUsers.subscribe()
+
     socket =
       socket
       |> assign(timezone: timezone, users: users)
       |> assign(online_users: OnlineUsers.list())
-      |> stream(:rooms, rooms)
 
     {:ok, socket}
   end
@@ -165,6 +172,8 @@ defmodule SlaxWeb.ChatRoomLive do
     if(socket.assigns[:room]) do
       Chat.unsubscribe_from_room(socket.assigns.room)
     end
+
+    IO.inspect(params)
 
     room =
       case Map.fetch(params, "id") do
@@ -179,10 +188,11 @@ defmodule SlaxWeb.ChatRoomLive do
      socket
      |> assign(
        hide_topic?: false,
-       page_title: "#" <> room.name,
-       room: room
+       room: room,
+       page_title: "#" <> room.name
      )
      |> stream(:messages, messages, reset: true)
+     |> stream(:rooms, Chat.list_rooms(), reset: true)
      |> push_event("scroll_messages_to_bottom", %{})
      |> assign_message_form(Chat.change_message(%Message{}))}
   end
@@ -233,6 +243,12 @@ defmodule SlaxWeb.ChatRoomLive do
 
   def handle_info({:message_deleted, message}, socket) do
     {:noreply, stream_delete(socket, :messages, message)}
+  end
+
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    online_users = OnlineUsers.update(socket.assigns.online_users, diff)
+
+    {:noreply, assign(socket, online_users: online_users)}
   end
 
   attr :active, :boolean, required: true
@@ -302,18 +318,19 @@ defmodule SlaxWeb.ChatRoomLive do
 
   attr :user, User, required: true
   attr :online, :boolean, default: false
+
   defp user(assigns) do
     ~H"""
-      <.link class="flex items-center h-8 hover:bg-gray-300 text-sm pl-8 pr-3" href="#">
-        <div class="flex justify-center w-4">
-          <%= if(@online) do %>
-            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-          <% else %>
-            <span class="w-2 h-2 rounded-full border-2 border-gray-500"></span>
-          <% end %>
-        </div>
-        <span class="ml-2 leading-none"><%= username(@user)%></span>
-      </.link>
+    <.link class="flex items-center h-8 hover:bg-gray-300 text-sm pl-8 pr-3" href="#">
+      <div class="flex justify-center w-4">
+        <%= if(@online) do %>
+          <span class="w-2 h-2 rounded-full bg-green-500"></span>
+        <% else %>
+          <span class="w-2 h-2 rounded-full border-2 border-gray-500"></span>
+        <% end %>
+      </div>
+      <span class="ml-2 leading-none"><%= username(@user) %></span>
+    </.link>
     """
   end
 end
