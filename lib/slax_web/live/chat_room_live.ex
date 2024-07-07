@@ -1,9 +1,11 @@
 defmodule SlaxWeb.ChatRoomLive do
   use SlaxWeb, :live_view
 
+  alias Slax.Accounts
   alias Slax.Accounts.User
   alias Slax.Chat
   alias Slax.Chat.{Room, Message}
+  alias SlaxWeb.OnlineUsers
 
   def render(assigns) do
     ~H"""
@@ -26,6 +28,20 @@ defmodule SlaxWeb.ChatRoomLive do
             room_id={room_id}
             active={room.id == @room.id}
           />
+        </div>
+        <div class="mt-4">
+          <div class="flex items-center h-8 px-3 group">
+            <div class="flex items-center flex-grow focus:outline-none">
+              <span class="ml-2 leading-none font-medium text-sm">Users</span>
+            </div>
+          </div>
+          <div id="users-list">
+            <.user
+              :for={user <- @users}
+              user={user}
+              online={OnlineUsers.online?(@online_users, user.id)}
+             />
+          </div>
         </div>
       </div>
     </div>
@@ -129,11 +145,17 @@ defmodule SlaxWeb.ChatRoomLive do
 
   def mount(_params, _session, socket) do
     rooms = Chat.list_rooms()
+    users = Accounts.list_users()
+
     timezone = get_connect_params(socket)["timezone"]
 
+    if connected?(socket) do
+      OnlineUsers.track(self(), socket.assigns.current_user)
+    end
     socket =
       socket
-      |> assign(:timezone, timezone)
+      |> assign(timezone: timezone, users: users)
+      |> assign(online_users: OnlineUsers.list())
       |> stream(:rooms, rooms)
 
     {:ok, socket}
@@ -276,5 +298,22 @@ defmodule SlaxWeb.ChatRoomLive do
 
   defp username(user) do
     user.email |> String.split("@") |> List.first() |> String.capitalize()
+  end
+
+  attr :user, User, required: true
+  attr :online, :boolean, default: false
+  defp user(assigns) do
+    ~H"""
+      <.link class="flex items-center h-8 hover:bg-gray-300 text-sm pl-8 pr-3" href="#">
+        <div class="flex justify-center w-4">
+          <%= if(@online) do %>
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <% else %>
+            <span class="w-2 h-2 rounded-full border-2 border-gray-500"></span>
+          <% end %>
+        </div>
+        <span class="ml-2 leading-none"><%= username(@user)%></span>
+      </.link>
+    """
   end
 end
