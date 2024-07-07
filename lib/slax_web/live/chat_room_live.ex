@@ -1,6 +1,7 @@
 defmodule SlaxWeb.ChatRoomLive do
   use SlaxWeb, :live_view
 
+  alias Slax.Accounts.User
   alias Slax.Chat
   alias Slax.Chat.{Room, Message}
 
@@ -19,7 +20,12 @@ defmodule SlaxWeb.ChatRoomLive do
           <span class="ml-2 leading-none font-medium text-sm">Rooms</span>
         </div>
         <div id="rooms-list" phx-update="stream">
-          <.room_link :for={{room_id, room} <- @streams.rooms} room={room} room_id={room_id} active={room.id == @room.id} />
+          <.room_link
+            :for={{room_id, room} <- @streams.rooms}
+            room={room}
+            room_id={room_id}
+            active={room.id == @room.id}
+          />
         </div>
       </div>
     </div>
@@ -87,7 +93,8 @@ defmodule SlaxWeb.ChatRoomLive do
       </div>
       <div id="room-messages" class="flex flex-col flex-grow overflow-auto" phx-update="stream">
         <.message
-          :for={{dom_id,message} <- @streams.messages}
+          :for={{dom_id, message} <- @streams.messages}
+          current_user={@current_user}
           dom_id={dom_id}
           message={message}
           timezone={@timezone}
@@ -135,9 +142,10 @@ defmodule SlaxWeb.ChatRoomLive do
     room =
       case Map.fetch(params, "id") do
         {:ok, id} -> Chat.get_room!(id)
-        :error -> List.first(socket.assigns.rooms)
+        :error -> Chat.get_first_room!()
       end
-      messages = Chat.list_messages_in_room(room)
+
+    messages = Chat.list_messages_in_room(room)
 
     {:noreply,
      socket
@@ -181,6 +189,12 @@ defmodule SlaxWeb.ChatRoomLive do
     {:noreply, socket}
   end
 
+  def handle_event("delete-message", %{"id" => message_id}, socket) do
+    {:ok, message} = Chat.delete_message_by_id(message_id, socket.assigns.current_user)
+
+    {:noreply, stream_delete(socket, :messages, message)}
+  end
+
   attr :active, :boolean, required: true
   attr :room, Room, required: true
   attr :room_id, :string, required: true
@@ -206,17 +220,29 @@ defmodule SlaxWeb.ChatRoomLive do
   attr :message, Message, required: true
   attr :dom_id, :string, required: true
   attr :timezone, :string, required: true
+  attr :current_user, User, required: true
 
   defp message(assigns) do
     ~H"""
     <div id={@dom_id} class="relative flex px-4 py-3">
+      <button
+        :if={@message.user.id == @current_user.id}
+        class="absolute top-4 right-4 text-red-500 hover:text-red-800 cursor-pointer"
+        data-confirm="Are you sure?"
+        phx-click="delete-message"
+        phx-value-id={@message.id}
+      >
+        <.icon name="hero-trash" class="w-4 h-4" />
+      </button>
       <div class="h-10 w-10 rounded flex-shrink-0 bg-slate-300"></div>
       <div class="ml-2">
         <div class="-mt-1">
           <.link class="text-sm font-semibold hover:underline">
             <span class=""><%= username(@message.user) %></span>
           </.link>
-          <span :if={@timezone} class="ml-1 text-xs text-gray-500"><%= message_timestamp(@message, @timezone) %></span>
+          <span :if={@timezone} class="ml-1 text-xs text-gray-500">
+            <%= message_timestamp(@message, @timezone) %>
+          </span>
           <p class="text-sm"><%= @message.body %></p>
         </div>
       </div>
